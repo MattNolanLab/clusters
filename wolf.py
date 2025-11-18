@@ -22,8 +22,8 @@ def main():
     mouse, day, session, protocol, curation, deriv_folder = int(args.mouse), int(args.day), args.session, args.protocol, args.curation, args.deriv_folder
 
     if deriv_folder is None:
-        deriv_folder = Path('/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/Wolf/MMNAV/derivatives')
-
+        deriv_folder = '/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/Wolf/MMNAV/derivatives'
+    deriv_folder = Path(deriv_folder)
 
     mouseday_path = deriv_folder / f'M{mouse:02d}/D{day:02d}/{session}/{protocol}'
     

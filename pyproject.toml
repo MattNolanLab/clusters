@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "ipykernel>=7.1.0",
+    "numba>=0.62.1",
     "pyqt5>=5.15.11",
     "pyqtgraph>=0.14.0",
     "spikeinterface-gui>=0.12.0",
