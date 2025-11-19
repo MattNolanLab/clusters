@@ -10,20 +10,31 @@ def main():
 
     parser = ArgumentParser()
 
-    parser.add_argument('mouse')
-    parser.add_argument('day')
-    parser.add_argument('session')
+    parser.add_argument('--mouse')
+    parser.add_argument('--day')
+    parser.add_argument('--session')
+    parser.add_argument('--recording', action='store_true', default=False)
     parser.add_argument('--protocol', default='kilosort4A')
     parser.add_argument('--curation', default='curationA')
-    parser.add_argument('--deriv_folder', default=None)
+    parser.add_argument('--MMNAV_folder', default=None)
 
     args = parser.parse_args()
     
-    mouse, day, session, protocol, curation, deriv_folder = int(args.mouse), int(args.day), args.session, args.protocol, args.curation, args.deriv_folder
+    mouse, day, session, protocol, curation, MMNAV_folder = int(args.mouse), int(args.day), args.session, args.protocol, args.curation, args.MMNAV_folder
 
-    if deriv_folder is None:
-        deriv_folder = '/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/Wolf/MMNAV/derivatives'
-    deriv_folder = Path(deriv_folder)
+    if MMNAV_folder is None:
+        MMNAV_folder = '/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/Wolf/MMNAV/'
+    MMNAV_folder = Path(MMNAV_folder)
+
+    deriv_folder = MMNAV_folder / 'derivatives'
+
+    recording = None
+    if args.recording:
+        raw_folder = MMNAV_folder / 'raw'
+        rec_folder = list(raw_folder.glob(f'*/M{mouse:02d}_D{day:02d}_*_{session}'))[0]
+        recording = si.read_openephys(rec_folder)
+        recording = si.common_reference(si.bandpass_filter(recording))
+
 
     mouseday_path = deriv_folder / f'M{mouse:02d}/D{day:02d}/{session}/{protocol}'
     
@@ -56,9 +67,9 @@ def main():
     curation_dict['removed'] = new_removed
 
     wolf_layout = dict(
-        zone1=['curation'],
+        zone1=['spikelist', 'curation'],
         zone2=['unitlist', 'merge'],
-        zone3=['spikeamplitude'],
+        zone3=['trace', 'tracemap', 'spikeamplitude'],
         zone4=[],
         zone5=['spikerate'],
         zone6=['probe'],
@@ -66,10 +77,14 @@ def main():
         zone8=['correlogram', 'metrics', 'mainsettings'],
     )
 
+    overlap = False
+    if args.recording:
+        overlap = True
+
     user_settings = {
         "waveform": {
-            "overlap": False,
-            "plot_selected_spike": False,
+            "overlap": overlap,
+            "plot_selected_spike": True,
             "plot_waveforms_samples": False,
             "y_scalebar": True,
         },
@@ -90,6 +105,7 @@ def main():
         verbose=True,
         layout=wolf_layout,
         user_settings=user_settings,
+        recording=recording,
     )
 
 
