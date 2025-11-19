@@ -10,6 +10,3 @@ dependencies = [
     "pyqtgraph>=0.14.0",
     "spikeinterface-gui>=0.12.0",
 ]
-
-[tool.uv.sources]
-spikeinterface-gui = { path = "../spikeinterface-gui", editable = true }
