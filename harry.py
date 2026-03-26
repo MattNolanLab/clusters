@@ -18,26 +18,30 @@ parser.add_argument('--MMNAV_folder', default=None)
 
 args = parser.parse_args()
 
-mouse, day, session, protocol, curation, MMNAV_folder = int(args.mouse), int(args.day), args.session, args.protocol, args.curation, args.MMNAV_folder
+mouse, day, session, protocol, curation, NPehys_folder = int(args.mouse), int(args.day), args.session, args.protocol, args.curation, args.MMNAV_folder
 
-if MMNAV_folder is None:
-    MMNAV_folder = '/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/Wolf/MMNAV/'
-MMNAV_folder = Path(MMNAV_folder)
+active_projects_folder = Path('/run/user/1000/gvfs/smb-share:server=cmvm.datastore.ed.ac.uk,share=cmvm/sbms/groups/CDBS_SIDB_storage/NolanLab/ActiveProjects/')
 
-deriv_folder = MMNAV_folder / 'derivatives'
+if NPehys_folder is None:
+    NPehys_folder = active_projects_folder / 'Harry/EphysNeuropixelData/'
+NPehys_folder = Path(NPehys_folder)
 
-recording = None
+deriv_folder = active_projects_folder / 'Chris/Cohort12/derivatives_for_split_analyzers'
+
+pp_recording = None
 if args.recording:
-    raw_folder = MMNAV_folder / 'raw'
-    rec_folder = list(raw_folder.glob(f'*/M{mouse:02d}_D{day:02d}_*_{session}'))[0]
+    if session in ['OF1', 'OF2']: 
+        raw_folder = NPehys_folder / 'of'
+    elif session == 'VR':
+        raw_folder = NPehys_folder / 'vr'
+    rec_folder = list(raw_folder.glob(f'M{mouse:02d}_D{day:02d}_*_{session}*'))[0]
     recording = si.read_openephys(rec_folder)
-    recording = si.common_reference(si.bandpass_filter(recording))
+    grouped_pp_recording = si.common_reference(si.bandpass_filter(recording.split_by('group')))
+    pp_recording = si.aggregate_channels(grouped_pp_recording)
 
+mouseday_path = deriv_folder / f'M{mouse:02d}/D{day:02d}/{session.lower()}/{protocol}'
 
-mouseday_path = deriv_folder / f'M{mouse:02d}/D{day:02d}/{session}/{protocol}'
-
-analyzer_path = mouseday_path / f'sub-{mouse:02d}_day-{day:02d}_ses-{session}_srt-{protocol}_analyzer.zarr'
-curation_path = mouseday_path / f'sub-{mouse:02d}_day-{day:02d}_ses-{session}_srt-{protocol}_{curation}.json'
+analyzer_path = mouseday_path / f'sub-M{mouse:02d}_ses-D{day:02d}_typ-{session}_srt-{protocol}_analyzer.zarr'
 
 analyzer = si.load_sorting_analyzer(analyzer_path)
 
@@ -45,31 +49,11 @@ no_spikes_units = analyzer.unit_ids[(analyzer.get_extension('quality_metrics').g
 analyzer_removed = analyzer.remove_units(no_spikes_units)
 kept_unit_ids = analyzer_removed.unit_ids
 
-if curation_path.is_file():
-    with open(curation_path) as f:
-        curation_dict = json.load(f)
-
-    curation_dict['unit_ids'] = list(kept_unit_ids)
-
-    new_manual_labels = []
-    for manual_labels in curation_dict['manual_labels']:
-        if manual_labels['unit_id'] in kept_unit_ids:
-            new_manual_labels.append(manual_labels)
-
-    curation_dict['manual_labels'] = new_manual_labels
-
-    new_removed = []
-    for removed_unit_id in curation_dict['removed']:
-        if removed_unit_id in kept_unit_ids:
-            new_removed.append(removed_unit_id)
-
-    curation_dict['removed'] = new_removed
-else:
-    curation_dict=None
+curation_dict=None
 
 wolf_layout = dict(
-    zone1=['spikelist', 'curation'],
-    zone2=['unitlist', 'merge'],
+    zone1=['unitlist','spikelist', 'curation'],
+    zone2=['maintemplate', 'merge'],
     zone3=['trace', 'tracemap', 'spikeamplitude'],
     zone4=[],
     zone5=['spikerate'],
@@ -106,7 +90,7 @@ run_mainwindow(
     verbose=True,
     layout=wolf_layout,
     user_settings=user_settings,
-    recording=recording,
+    recording=pp_recording,
 )
 
 
